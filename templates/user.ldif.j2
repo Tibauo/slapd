@@ -1,0 +1,17 @@
+dn: uid=admin,ou=People,dc={{ dcname }},dc=local
+objectClass: top
+objectClass: account
+objectClass: posixAccount
+objectClass: shadowAccount
+cn: admin
+uid: admin
+uidNumber: 9998
+gidNumber: 101
+homeDirectory: /home/admin
+loginShell: /bin/bash
+gecos: admin [Admin (at) {{ dcname }}]
+userPassword: {crypt}x
+shadowLastChange: 17058
+shadowMin: 0
+shadowMax: 99999
+shadowWarning: 7

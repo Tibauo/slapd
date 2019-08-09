@@ -1,0 +1,11 @@
+---
+# defaults file for slapd
+required_package:
+  - openldap
+  - compat-openldap
+  - openldap-clients
+  - openldap-servers
+  - openldap-servers-sql
+  - openldap-devel
+
+dcname: mondc

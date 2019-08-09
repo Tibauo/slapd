@@ -1,0 +1,78 @@
+---
+# tasks file for slapd
+- name: Install package
+  package:
+    name: "{{ required_package }}"
+    state: present
+
+- name: Start & enable ldap
+  systemd:
+    name: slapd
+    state: started
+    enabled: yes
+
+- name: Generate the root password for ldap
+  shell: slappasswd -s {{ rootpw }} 
+  register: ldap_root_password
+
+- name: Debug
+  debug:
+    msg: "{{ ldap_root_password.stdout }}"
+
+- name: Creates directory
+  file:
+    path: /tmp/slapd
+    state: directory
+
+- name: Template
+  template:
+    src: "{{ item }}.j2"
+    dest: "/tmp/slapd/{{ item }}"
+  with_items:
+    - base.ldif
+    - certs.ldif
+    - db.ldif
+    - monitor.ldif
+    - user.ldif
+
+- name: Create certificate
+  shell: openssl req -new -x509 -nodes -out /etc/openldap/certs/{{ dcname }}.cert.pem -keyout /etc/openldap/certs/{{ dcname }}.key.pem -days 365 -subj "/CN=BACK"
+
+- name: Copy
+  copy:
+    src: /usr/share/openldap-servers/DB_CONFIG.example
+    dest: /var/lib/ldap/DB_CONFIG
+    remote_src: yes
+
+- name: Owner cert & key
+  file:
+    path: /etc/openldap/certs/{{ item }}
+    owner: ldap
+    group: ldap
+  with_items:
+    - "{{ dcname }}.key.pem"
+    - "{{ dcname }}.cert.pem"
+
+- name: Execute *.ldif
+  shell: ldapmodify -Y EXTERNAL  -H ldapi:/// -f /tmp/slapd/{{ item }}
+  with_items:
+    - db.ldif
+    - monitor.ldif
+    - certs.ldif
+
+- name: Execute *.ldif
+  shell: slaptest -u
+
+- name: Execute *.ldif
+  shell: ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/{{ item }}
+  with_items:
+    - cosine.ldif
+    - nis.ldif
+    - inetorgperson.ldif
+
+- name: Execute *.ldif
+  shell: ldapadd -x -w {{ rootpw }} -D "cn=ldapadm,dc={{ dcname }},dc=local" -f /tmp/slapd/base.ldif
+
+- name: Execute *.ldif
+  shell: ldapadd -x -w {{ rootpw }} -D "cn=ldapadm,dc={{ dcname }},dc=local" -f /tmp/slapd/user.ldif
+
